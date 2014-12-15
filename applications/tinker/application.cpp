@@ -32,26 +32,112 @@ int tinkerDigitalWrite(String command);
 int tinkerAnalogRead(String pin);
 int tinkerAnalogWrite(String command);
 
+
+// Define the pins we're going to call pinMode on
+int led  = D0;  // You'll need to wire an LED to this one to see it blink.
+int led2 = D7;  // This one is the built-in tiny one to the right of the USB jack
+
+//TCPClient tcpClient = TCPClient();
+
 SYSTEM_MODE(AUTOMATIC);
 
 /* This function is called once at start up ----------------------------------*/
 void setup()
 {
-	//Setup the Tinker application here
+    // Connecting
+	pinMode(led2, OUTPUT);
+
+	digitalWrite(led2, HIGH);
+	delay(1000);
+	digitalWrite(led2, LOW);
+	delay(200);
+
+	Serial.begin(9600);
+	int waiting_serial_count = 0;
+	while(!Serial.available() and (waiting_serial_count < 150)){ // wait for 15 seconds
+   		SPARK_WLAN_Loop();
+   		digitalWrite(led2, HIGH);
+   		if (waiting_serial_count > 120){
+   	   		digitalWrite(led, HIGH);
+   		}
+   		delay(75);
+   		digitalWrite(led2, LOW);
+   		if (waiting_serial_count > 120){
+   	   		digitalWrite(led, LOW);
+   		}
+
+   		delay(25);
+   		waiting_serial_count += 1;
+   	}
+
+	digitalWrite(led2, HIGH);
+	delay(1000);
+	digitalWrite(led2, LOW);
+	delay(200);
+
+	Serial.println(WiFi.localIP());
+    Serial.println(WiFi.subnetMask());
+    Serial.println(WiFi.gatewayIP());
+    Serial.println(WiFi.SSID());
+
+	Serial.println("Setup...");
+
+	//tcpClient.connect("192.168.11.90", 80);
+
+
+
 
 	//Register all the Tinker functions
+    Serial.println("Declaring Spark functions...");
 	Spark.function("digitalread", tinkerDigitalRead);
 	Spark.function("digitalwrite", tinkerDigitalWrite);
 
 	Spark.function("analogread", tinkerAnalogRead);
 	Spark.function("analogwrite", tinkerAnalogWrite);
 
+
+      digitalWrite(led, HIGH);
+	  digitalWrite(led2, HIGH);
+	  delay(500);
+	  digitalWrite(led, LOW);
+	  digitalWrite(led2, LOW);
+	  delay(100);
+
+	  digitalWrite(led, HIGH);
+	  digitalWrite(led2, HIGH);
+	  delay(500);
+	  digitalWrite(led, LOW);
+	  digitalWrite(led2, LOW);
+	  delay(100);
+
+	  Serial.println("Setup done...");
 }
+
+int counter = 0;
 
 /* This function loops forever --------------------------------------------*/
 void loop()
 {
-	//This will run in a loop
+	if (counter > 5000){
+		  Serial.println("------------ Flashing LEDs ----------------------------------");
+		  for (int i = 0; i < 5; i++){
+			  digitalWrite(led, HIGH);
+			  digitalWrite(led2, HIGH);
+			  delay(300);
+			  digitalWrite(led, LOW);
+			  digitalWrite(led2, LOW);
+			  delay(100);
+		  }
+		  counter = 0;
+	} else {
+		  delay(10);
+		  counter = counter + 10;	// wait 10 ms
+		  if ((counter%1000) == 0){
+			  Serial.print(counter/1000);
+			  Serial.print(" ");
+			  Serial.flush();
+		  }
+	}
 }
 
 /*******************************************************************************
