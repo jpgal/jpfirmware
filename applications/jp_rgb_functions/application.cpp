@@ -1,30 +1,30 @@
 /**
  ******************************************************************************
- * @file    application.cpp
- * @authors  Satish Nair, Zachary Crockett and Mohit Bhoite
- * @version V1.0.0
- * @date    05-November-2013
- * @brief   Tinker application
- ******************************************************************************
-  Copyright (c) 2013 Spark Labs, Inc.  All rights reserved.
+  * @file    application.cpp
+  * @authors  JP Gal
+  * @version V0.0.1
+  * @date    15-December-2014
+  * @brief   User Application File Header
+  ******************************************************************************
+  Copyright (c) 2014 TAOLight.  All rights reserved.
 
-  This program is free software; you can redistribute it and/or
+  This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
   License as published by the Free Software Foundation, either
   version 3 of the License, or (at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
+  This library is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
   Lesser General Public License for more details.
 
   You should have received a copy of the GNU Lesser General Public
-  License along with this program; if not, see <http://www.gnu.org/licenses/>.
+  License along with this library; if not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************
  */
 
 /* Includes ------------------------------------------------------------------*/  
-#include "application.h"
+#include "rgb_functions.h"
 
 /* Function prototypes -------------------------------------------------------*/
 int tinkerDigitalRead(String pin);
@@ -34,8 +34,8 @@ int tinkerAnalogWrite(String command);
 
 
 // Define the pins we're going to call pinMode on
-int led  = D0;  // You'll need to wire an LED to this one to see it blink.
-int led2 = D7;  // This one is the built-in tiny one to the right of the USB jack
+int led0 = D0;  // You'll need to wire an LED to this one to see it blink.
+int ledBI = D7;  // This one is the built-in tiny one to the right of the USB jack
 
 //TCPClient tcpClient = TCPClient();
 
@@ -45,34 +45,36 @@ SYSTEM_MODE(AUTOMATIC);
 void setup()
 {
     // Connecting
-	pinMode(led2, OUTPUT);
+	pinMode(ledBI, OUTPUT);
+	pinMode(led0, OUTPUT);
 
-	digitalWrite(led2, HIGH);
+	digitalWrite(ledBI, HIGH);
 	delay(1000);
-	digitalWrite(led2, LOW);
+	digitalWrite(ledBI, LOW);
 	delay(200);
 
 	Serial.begin(9600);
 	int waiting_serial_count = 0;
 	while(!Serial.available() and (waiting_serial_count < 150)){ // wait for 15 seconds
    		SPARK_WLAN_Loop();
-   		digitalWrite(led2, HIGH);
+   		digitalWrite(ledBI, HIGH);
    		if (waiting_serial_count > 120){
-   	   		digitalWrite(led, HIGH);
-   		}
-   		delay(75);
-   		digitalWrite(led2, LOW);
-   		if (waiting_serial_count > 120){
-   	   		digitalWrite(led, LOW);
+   	   		digitalWrite(led0, HIGH);
+			delay(60);
+			digitalWrite(ledBI, LOW);
+   	   		digitalWrite(led0, LOW);
+   		} else {
+			delay(80);
+			digitalWrite(ledBI, LOW);
    		}
 
    		delay(25);
    		waiting_serial_count += 1;
    	}
 
-	digitalWrite(led2, HIGH);
+	digitalWrite(ledBI, HIGH);
 	delay(1000);
-	digitalWrite(led2, LOW);
+	digitalWrite(ledBI, LOW);
 	delay(200);
 
 	Serial.println(WiFi.localIP());
@@ -96,18 +98,18 @@ void setup()
 	Spark.function("analogwrite", tinkerAnalogWrite);
 
 
-      digitalWrite(led, HIGH);
-	  digitalWrite(led2, HIGH);
+      digitalWrite(led0, HIGH);
+	  digitalWrite(ledBI, HIGH);
 	  delay(500);
-	  digitalWrite(led, LOW);
-	  digitalWrite(led2, LOW);
+	  digitalWrite(led0, LOW);
+	  digitalWrite(ledBI, LOW);
 	  delay(100);
 
-	  digitalWrite(led, HIGH);
-	  digitalWrite(led2, HIGH);
+	  digitalWrite(led0, HIGH);
+	  digitalWrite(ledBI, HIGH);
 	  delay(500);
-	  digitalWrite(led, LOW);
-	  digitalWrite(led2, LOW);
+	  digitalWrite(led0, LOW);
+	  digitalWrite(ledBI, LOW);
 	  delay(100);
 
 	  Serial.println("Setup done...");
@@ -121,11 +123,11 @@ void loop()
 	if (counter > 5000){
 		  Serial.println("------------ Flashing LEDs ----------------------------------");
 		  for (int i = 0; i < 5; i++){
-			  digitalWrite(led, HIGH);
-			  digitalWrite(led2, HIGH);
-			  delay(300);
-			  digitalWrite(led, LOW);
-			  digitalWrite(led2, LOW);
+			  digitalWrite(led0, HIGH);
+			  digitalWrite(ledBI, HIGH);
+			  delay(400);
+			  digitalWrite(ledBI, LOW);
+			  digitalWrite(led0, LOW);
 			  delay(100);
 		  }
 		  counter = 0;
@@ -139,6 +141,23 @@ void loop()
 		  }
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /*******************************************************************************
  * Function Name  : tinkerDigitalRead
