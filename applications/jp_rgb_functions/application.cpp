@@ -24,9 +24,9 @@
  */
 
 /* Includes ------------------------------------------------------------------*/  
-#include "application.h"
-#include "rgb_functions.h"
 #include <spark_wiring.h>
+#include "application.h"
+#include "liquid-crystal-spi.h"
 
 /* Function prototypes -------------------------------------------------------*/
 int tinkerDigitalRead(String pin);
@@ -36,15 +36,11 @@ int tinkerAnalogWrite(String command);
 
 
 // Define the pins we're going to call pinMode on
-int ledA0 = A0;  // You'll need to wire an LED to this one to see it blink.
+int ledD0 = D0;  // You'll need to wire an LED to this one to see it blink.
 int ledBI = D7;  // This one is the built-in tiny one to the right of the USB jack
 
-int ledC = A7;
-int ledG = A6;
-int ledY = A5;
-int ledR = A4;
-
-int ledT = A1;	// Temperature Activity
+//LiquidCrystal lcd(A2);
+LiquidCrystal lcd(D2, D3, D4);
 
 IPAddress remoteTAOUpIP(192, 168,   8,  21);
 IPAddress localNASIP   (192, 168,  11,  17);
@@ -57,13 +53,9 @@ int remoteTAOUpwasConnected = 5;
 
 char connInfo[64];
 
-//TCPClient tcpClient = TCPClient();
-#define HIGH_A  150
-#define LOW_A     0
-
 #include "spark-dallas-temperature.h"
 
-DallasTemperature dallas(new OneWire(D2));
+DallasTemperature dallas(new OneWire(D1));
 DeviceAddress insideThermometer;
 
 char szInfo[64];
@@ -71,30 +63,9 @@ char tmpBuf[64];
 
 SYSTEM_MODE(AUTOMATIC);
 
-void write4LEDs(int cValue, int gValue, int yValue, int rValue){
-	analogWrite(ledC, cValue);
-	analogWrite(ledG, gValue);
-	analogWrite(ledY, yValue);
-	analogWrite(ledR, rValue);
-}
 
 int displayTemperature(float celsius){
 	int temperatureDisplayed = 0;
-
-	if (celsius < 1){	  write4LEDs(  0,   0,   0,   0); }
-	else if(celsius < 17){write4LEDs(255, 122,   0,   0);       temperatureDisplayed =  1;}
-
-	if (celsius > 17){
-		 if(celsius < 18){write4LEDs( 50,   0,   0,   0);	    temperatureDisplayed =  2;}
-	else if(celsius < 19){write4LEDs(200,   0,   0,   0);	    temperatureDisplayed =  3;}
-	else if(celsius < 20){write4LEDs(  0,  50,   0,   0);	    temperatureDisplayed =  4;}
-	else if(celsius < 21){write4LEDs(  0, 200,   0,   0);	    temperatureDisplayed =  5;}
-	else if(celsius < 22){write4LEDs(  0,   0,  50,   0);	    temperatureDisplayed =  6;}
-	else if(celsius < 23){write4LEDs(  0,   0, 200,   0);	    temperatureDisplayed =  7;}
-	else if(celsius < 24){write4LEDs(  0,   0,   0,  50);	    temperatureDisplayed =  8;}
-	else if(celsius < 25){write4LEDs(  0,   0,   0, 200);	    temperatureDisplayed =  9;}
-	else                 {write4LEDs(  0,   0, 120, 255);		temperatureDisplayed = 10;}
-	}
 
 	return temperatureDisplayed;
 }
@@ -106,14 +77,7 @@ void setup()
 {
     // Connecting
 	pinMode(ledBI, OUTPUT);
-	pinMode(ledA0, OUTPUT);
-
-	pinMode(ledT, OUTPUT);
-
-	pinMode(ledC, OUTPUT);
-	pinMode(ledG, OUTPUT);
-	pinMode(ledY, OUTPUT);
-	pinMode(ledR, OUTPUT);
+	pinMode(ledD0, OUTPUT);
 
 	digitalWrite(ledBI, HIGH);
 	delay(1000);
@@ -126,10 +90,10 @@ void setup()
    		SPARK_WLAN_Loop();
 
    		digitalWrite(ledBI, HIGH);
-   		analogWrite(ledA0, (waiting_serial_count * 60) / 25);
+   		analogWrite(ledD0, (waiting_serial_count * 60) / 25);
 		delay(65);
 
-		analogWrite(ledA0,  LOW_A);
+		analogWrite(ledD0,  LOW);
 		digitalWrite(ledBI, LOW);
    		delay(25);
 
@@ -141,17 +105,76 @@ void setup()
 	digitalWrite(ledBI, LOW);
 	delay(200);
 
+	// initialize the SPI ( Must call this before begin()! )
+	Serial.println("init SPI");
+	lcd.initSPI();
+	// set up the LCD's number of columns and rows:
+	Serial.println("begin");
+	lcd.begin(16, 2);
+	// Print a message to the LCD.
+	Serial.println("display Message");
+	lcd.print("Hello, Sparky!");
+	delay(1000);
+
+	digitalWrite(ledBI, HIGH);
+	delay(1000);
+	digitalWrite(ledBI, LOW);
+	delay(200);
+
+	Serial.println("flash blacklight");
+	for (int bIndex = 0; bIndex < 5; bIndex++){
+		lcd.backlight();
+		delay(200);
+		lcd.noBacklight();
+		delay(200);
+	}
+
+	digitalWrite(ledBI, HIGH);
+	delay(1000);
+	digitalWrite(ledBI, LOW);
+	delay(200);
+
+	Serial.println("display characters");
+	for (int l = 0; l < 2; l++){
+		Serial.println(String("Line: ")+ l );
+		for (int c = 0; c < 16; c++){
+			lcd.setCursor(c, l);
+			// print the number of seconds since reset:
+			Serial.print(String(c)+ " ");
+			Serial.flush();
+			lcd.print("H");
+			delay(500);
+		}
+	}
+	Serial.println("");
+
+	digitalWrite(ledBI, HIGH);
+	delay(1000);
+	digitalWrite(ledBI, LOW);
+	delay(200);
+
+	Serial.println("display Wifi param");
 	Serial.println(WiFi.localIP());
     Serial.println(WiFi.subnetMask());
     Serial.println(WiFi.gatewayIP());
     Serial.println(WiFi.SSID());
 
-	Serial.println("Setup...");
+	digitalWrite(ledBI, HIGH);
+	delay(1000);
+	digitalWrite(ledBI, LOW);
+	delay(200);
 
-	//tcpClient.connect("192.168.11.90", 80);
+	Serial.println("Starting Temperature Sensor...");
+	dallas.begin();
+	Serial.println("Setting resolution to 12...");
+	if (!dallas.getAddress(insideThermometer, 0)) Serial.println("Unable to find address for Device 0");
+	dallas.setResolution(insideThermometer, 12);
+	Serial.println("Started  Sensor...");
 
-
-
+	digitalWrite(ledBI, HIGH);
+	delay(1000);
+	digitalWrite(ledBI, LOW);
+	delay(200);
 
 	//Register all the Tinker functions
     Serial.println("Declaring Spark functions...");
@@ -161,55 +184,21 @@ void setup()
 	Spark.function("analogread", tinkerAnalogRead);
 	Spark.function("analogwrite", tinkerAnalogWrite);
 
-
-	analogWrite(ledA0, HIGH_A);
-	digitalWrite(ledBI, HIGH);
-	delay(500);
-	analogWrite(ledA0, LOW_A);
-	digitalWrite(ledBI, LOW);
-	delay(100);
-
-	analogWrite(ledA0, HIGH_A);
-	digitalWrite(ledBI, HIGH);
-	delay(500);
-	analogWrite(ledA0, LOW_A);
-	digitalWrite(ledBI, LOW);
-	delay(100);
-
-	Serial.println("Starting Sensor...");
-	dallas.begin();
-	Serial.println("Setting resolution to 12...");
-	if (!dallas.getAddress(insideThermometer, 0)) Serial.println("Unable to find address for Device 0");
-	dallas.setResolution(insideThermometer, 12);
-	Serial.println("Started  Sensor...");
-
-	Serial.println("Publishing tempr variable on  the cloud...");
 	Spark.variable("tempr", &szInfo, STRING);
 	Spark.variable("conn", &connInfo, STRING);
 
-  	delay(500);
-	Serial.println("Flashing RGB...");
-  	delay(1000);
-  	analogWrite(ledC, HIGH_A);	delay(250);
-  	analogWrite(ledG, HIGH_A);	delay(120);
-  	analogWrite(ledY, HIGH_A);	delay(120);
-  	analogWrite(ledR, HIGH_A);	delay(120);
-  	delay(250);
-  	analogWrite(ledC, LOW_A);	delay(120);
-  	analogWrite(ledG, LOW_A);	delay(120);
-  	analogWrite(ledY, LOW_A);	delay(120);
-  	analogWrite(ledR, LOW_A);	delay(120);
-  	delay(500);
-
-	Serial.println("Flashing Temperature Gradient...");
-  	delay(1000);
+	/*
+	 *
+	 Serial.println("Flashing Temperature Gradient...");
+  	delay(100);
   	for (float temp=15.0; temp < 32.0; temp += 1.0){
   		Serial.print("Temperature:");
   		Serial.println(temp);
   		displayTemperature(temp);
-  		delay(500);
+  		delay(50);
   	}
 	displayTemperature(0.0);
+	*/
 
 	Serial.println("Setup done...");
 }
@@ -222,27 +211,29 @@ void displayConnectivityStatus()
 {
 	if (remoteTAOUpConnected + remoteTAOUpwasConnected + localNASConnected + localNASwasConnected < 15) {
 		for (int i = 0; i < 3; i++){
-			digitalWrite(ledA0, HIGH);
+			digitalWrite(ledD0, HIGH);
 			delay(100);
-			digitalWrite(ledA0, LOW);
+			digitalWrite(ledD0, LOW);
 			delay(50);
 		}
 	}
 
 	if (localNASConnected < 2 and localNASwasConnected < 2){
 		Serial.println("Flashing Local");
-		digitalWrite(ledA0, 120);
+		digitalWrite(ledD0, 120);
 	} else if (remoteTAOUpConnected < 2 and remoteTAOUpwasConnected < 2){
 		Serial.println("Flashing Remote");
-		digitalWrite(ledA0, HIGH);
+		digitalWrite(ledD0, HIGH);
 	} else {
-		digitalWrite(ledA0,   0);
+		digitalWrite(ledD0,   0);
 	}
 
 	sprintf(tmpBuf, "Local %d/%d, Remote %d/%d", localNASConnected, localNASwasConnected, remoteTAOUpConnected, remoteTAOUpwasConnected);
 	//Serial.println(tmpBuf);
 	strcpy(connInfo, tmpBuf);
 }
+
+int displayS = 0;
 
 /* This function loops forever --------------------------------------------*/
 void loop()
@@ -252,15 +243,6 @@ void loop()
 
 	if (counter > 10000){ // every 10 seconds
 		Serial.println("");
-		/*
-		Serial.println("------------ Flashing LEDs ----------------------------------");
-		for (int i = 0; i < 1; i++){
-			digitalWrite(ledBI, HIGH);
-			delay(200);
-			digitalWrite(ledBI, LOW);
-			delay(50);
-		}
-		*/
 		counter = 0;
 		digitalWrite(ledBI, HIGH);
 
@@ -283,19 +265,12 @@ void loop()
 			// Changed the temperature displayed
 			// We flash the main LED a few times
 			current_temperature_display = temperatureDisplayed;
-			for (int i = 0; i < 5; i++){
-				digitalWrite(ledT, HIGH_A);
+			for (int i = 0; i < 2; i++){
+				digitalWrite(ledD0, HIGH);
 				delay(250);
-				digitalWrite(ledT, LOW_A);
+				digitalWrite(ledD0, LOW);
 				delay(50);
 			}
-		} else if ((celsius - current_temperature > 0.5) or (current_temperature - celsius> 0.5)){
-			// The temperature has changed
-			// We flash once
-			analogWrite(ledT, 100);
-   		  	delay(250);
-   		  	current_temperature = celsius;
-   		  	analogWrite(ledT, LOW_A);
 		}
 
 		digitalWrite(ledBI, LOW);
@@ -319,9 +294,11 @@ void loop()
 
 		displayConnectivityStatus();
 
+		Serial.println("-------------- LCD.clear() -------- ");
+		lcd.clear();
+
 		remoteTAOUpwasConnected = remoteTAOUpConnected;
 		localNASwasConnected    = localNASConnected;
-
 	} else {
 		delay(10);
 		counter = counter + 10;	// wait 10 ms
@@ -334,6 +311,27 @@ void loop()
 			Serial.println(") ");
 
 			displayConnectivityStatus();
+
+			displayS = 1 - displayS;
+
+			for (int l = 0; l < 2; l++){
+				Serial.print("--");
+				for (int c = 0; c < 16; c++){
+					lcd.setCursor(c, l);
+					// print the number of seconds since reset:
+					if (displayS > 0){
+						lcd.print("L");
+						Serial.print("L");
+					} else {
+						lcd.print("H");
+						Serial.print("H");
+					}
+					Serial.flush();
+					delay(200);
+				}
+			}
+			Serial.println("");
+			Serial.println("--- Done ---");
 		}
 	}
 
