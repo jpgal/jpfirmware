@@ -23,8 +23,8 @@
   ******************************************************************************
   */
 
-#ifndef RGB_FUNCTIONS_H_
-#define RGB_FUNCTIONS_H_
+#ifndef IDUAL_PROGRAMS_H_
+#define IDUAL_PROGRAMS_H_
 
 #include "spark_wiring.h"
 #include "spark_wiring_interrupts.h"
@@ -46,44 +46,27 @@
 #include "spark_wiring_eeprom.h"
 
 
-// Structures to control one gradient
+extern int PCtrl_def_rLed;
+extern int PCtrl_def_gLed;
+extern int PCtrl_def_bLed;
+
+extern int PCtrl_def_wwLed;
+extern int PCtrl_def_cwLed;
+
+// Structures to control one program step
 typedef struct {
-	int val_curr;
-	int val_incr;
-	int val_min;
-	int val_max;
+	int r;
+	int g;
+	int b;
+	int ww;
+	int cw;
 	int delay;
-	int loop_number;
-} GradientParamStruct;
-
-typedef struct {
-	int led_pin;
-	int val_curr;
-	int val_incr;
-	int val_min;
-	int val_max;
-	int delay;
-	int loop_current;
-	int loop_number;
-} GradientControlStruct;
-
-// The list of gradients to control the 5 LEDs
-typedef struct {
-	GradientControlStruct r;
-	GradientControlStruct g;
-	GradientControlStruct b;
-
-	GradientControlStruct ww;
-	GradientControlStruct cw;
-} GradientControls;
-
-extern GradientControls GCtrl;
+} ProgramStepStruct;
 
 // The functions
-extern int GCtrl_set(int pinNumber, GradientParamStruct params);	// creates a new Gradient
-extern int GCtrl_reset(int pinNumber);								// remove an existing Gradients
-extern int GCtrl_resetAll();										// remove all Gradients (set all LED to LOW)
-extern int GCtrl_iterate();											// iterate the gradients
+extern int PCtrl_set(ProgramStepStruct *steps);	// Apply a program
+extern int PCtrl_reset();						// Restart from the beginning of the program
+extern int PCtrl_iterate();						// Iterate through the program steps
+extern void PCtrl_setup();
 
-
-#endif /* RGB_FUNCTIONS_H_ */
+#endif /* IDUAL_PROGRAMS_H_ */

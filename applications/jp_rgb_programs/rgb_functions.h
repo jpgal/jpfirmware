@@ -46,6 +46,13 @@
 #include "spark_wiring_eeprom.h"
 
 
+extern int GCtrl_def_rLed;
+extern int GCtrl_def_gLed;
+extern int GCtrl_def_bLed;
+
+extern int GCtrl_def_wwLed;
+extern int GCtrl_def_cwLed;
+
 // Structures to control one gradient
 typedef struct {
 	int val_curr;
@@ -84,6 +91,8 @@ extern int GCtrl_set(int pinNumber, GradientParamStruct params);	// creates a ne
 extern int GCtrl_reset(int pinNumber);								// remove an existing Gradients
 extern int GCtrl_resetAll();										// remove all Gradients (set all LED to LOW)
 extern int GCtrl_iterate();											// iterate the gradients
-
+extern int GCtrl_stop(int pinNumber);
+extern int GCtrl_remove(int pinNumber);
+extern void GCtrl_setup();
 
 #endif /* RGB_FUNCTIONS_H_ */

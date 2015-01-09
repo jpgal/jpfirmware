@@ -52,7 +52,7 @@ typedef struct {
 	uint8_t val_min;
 	uint8_t val_max;
 	uint8_t delay;
-	uint8_t loop_number;
+	 int8_t loop_number;
 } GradientParamStruct;
 
 // This is what lihnk a program to a LED
@@ -64,7 +64,7 @@ typedef struct {
 	uint8_t val_max;
 	uint8_t delay;
 	uint8_t loop_current;
-	uint8_t loop_number;
+	 int8_t loop_number;
 } GradientControlStruct;
 
 // this is the list of 5 on going programs
@@ -115,7 +115,7 @@ GradientControlStruct _applyProgram(GradientParamStruct programSettings, Gradien
 GradientControlStruct _iterateProgram(GradientControlStruct programStructure){
 	int8_t newVal = -1;
 
-	if (programStructure.val_incr != 0 and programStructure.loop_current < programStructure.loop_number){
+	if (programStructure.val_incr != 0 and (programStructure.loop_number == -1 or programStructure.loop_current < programStructure.loop_number)){
 		newVal = programStructure.val_curr + programStructure.val_incr;
 		if (newVal >= programStructure.val_min and newVal <= programStructure.val_max){
 			programStructure.val_curr = newVal;
@@ -224,4 +224,23 @@ int GCtrl_iterate()
 	Serial.println("GCtrl_iterate() ALL Done");
 	return 0;
 }
+
+void GCtrl_setup(){
+	pinMode(GCtrl_def_rLed,  OUTPUT);
+	pinMode(GCtrl_def_gLed,  OUTPUT);
+	pinMode(GCtrl_def_bLed,  OUTPUT);
+	pinMode(GCtrl_def_wwLed, OUTPUT);
+	pinMode(GCtrl_def_cwLed, OUTPUT);
+}
+
+
+
+
+
+
+
+
+
+
+
 

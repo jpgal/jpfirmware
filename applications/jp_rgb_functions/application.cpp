@@ -49,8 +49,13 @@ int ledT = A1;	// Temperature Activity
 IPAddress remoteTAOUpIP(192, 168,   8,  21);
 IPAddress localNASIP   (192, 168,  11,  17);
 
-boolean localNASConnected    = true;
-boolean remoteTAOUpConnected = true;
+int localNASConnected    = 5;
+int remoteTAOUpConnected = 5;
+
+int localNASwasConnected    = 5;
+int remoteTAOUpwasConnected = 5;
+
+char connInfo[64];
 
 //TCPClient tcpClient = TCPClient();
 #define HIGH_A  150
@@ -77,18 +82,18 @@ int displayTemperature(float celsius){
 	int temperatureDisplayed = 0;
 
 	if (celsius < 1){	  write4LEDs(  0,   0,   0,   0); }
-	else if(celsius < 16){write4LEDs(255,  80,   0,   0);       temperatureDisplayed =  1;}
+	else if(celsius < 17){write4LEDs(255, 122,   0,   0);       temperatureDisplayed =  1;}
 
-	if (celsius > 16){
-		 if(celsius < 17){write4LEDs( 50,   0,   0,   0);	    temperatureDisplayed =  2;}
-	else if(celsius < 18){write4LEDs(200,   0,   0,   0);	    temperatureDisplayed =  3;}
-	else if(celsius < 21){write4LEDs(  0,  50,   0,   0);	    temperatureDisplayed =  4;}
-	else if(celsius < 22){write4LEDs(  0, 200,   0,   0);	    temperatureDisplayed =  5;}
-	else if(celsius < 23){write4LEDs(  0,   0,  50,   0);	    temperatureDisplayed =  6;}
-	else if(celsius < 24){write4LEDs(  0,   0, 200,   0);	    temperatureDisplayed =  7;}
-	else if(celsius < 25){write4LEDs(  0,   0,   0,  50);	    temperatureDisplayed =  8;}
-	else if(celsius < 26){write4LEDs(  0,   0,   0, 200);	    temperatureDisplayed =  9;}
-	else                 {write4LEDs(  0,   0,  80, 255);		temperatureDisplayed = 10;}
+	if (celsius > 17){
+		 if(celsius < 18){write4LEDs( 50,   0,   0,   0);	    temperatureDisplayed =  2;}
+	else if(celsius < 19){write4LEDs(200,   0,   0,   0);	    temperatureDisplayed =  3;}
+	else if(celsius < 20){write4LEDs(  0,  50,   0,   0);	    temperatureDisplayed =  4;}
+	else if(celsius < 21){write4LEDs(  0, 200,   0,   0);	    temperatureDisplayed =  5;}
+	else if(celsius < 22){write4LEDs(  0,   0,  50,   0);	    temperatureDisplayed =  6;}
+	else if(celsius < 23){write4LEDs(  0,   0, 200,   0);	    temperatureDisplayed =  7;}
+	else if(celsius < 24){write4LEDs(  0,   0,   0,  50);	    temperatureDisplayed =  8;}
+	else if(celsius < 25){write4LEDs(  0,   0,   0, 200);	    temperatureDisplayed =  9;}
+	else                 {write4LEDs(  0,   0, 120, 255);		temperatureDisplayed = 10;}
 	}
 
 	return temperatureDisplayed;
@@ -117,20 +122,17 @@ void setup()
 
 	Serial.begin(9600);
 	int waiting_serial_count = 0;
-	while(!Serial.available() and (waiting_serial_count < 150)){ // wait for 15 seconds
+	while(!Serial.available() and (waiting_serial_count < 100)){ // wait for 10 seconds
    		SPARK_WLAN_Loop();
-   		digitalWrite(ledBI, HIGH);
-   		if (waiting_serial_count > 120){
-   	   		analogWrite(ledA0, HIGH_A);
-			delay(60);
-			digitalWrite(ledBI, LOW);
-			analogWrite(ledA0, LOW_A);
-   		} else {
-			delay(80);
-			digitalWrite(ledBI, LOW);
-   		}
 
+   		digitalWrite(ledBI, HIGH);
+   		analogWrite(ledA0, (waiting_serial_count * 60) / 25);
+		delay(65);
+
+		analogWrite(ledA0,  LOW_A);
+		digitalWrite(ledBI, LOW);
    		delay(25);
+
    		waiting_serial_count += 1;
    	}
 
@@ -183,6 +185,7 @@ void setup()
 
 	Serial.println("Publishing tempr variable on  the cloud...");
 	Spark.variable("tempr", &szInfo, STRING);
+	Spark.variable("conn", &connInfo, STRING);
 
   	delay(500);
 	Serial.println("Flashing RGB...");
@@ -196,7 +199,7 @@ void setup()
   	analogWrite(ledG, LOW_A);	delay(120);
   	analogWrite(ledY, LOW_A);	delay(120);
   	analogWrite(ledR, LOW_A);	delay(120);
-  	delay(1000);
+  	delay(500);
 
 	Serial.println("Flashing Temperature Gradient...");
   	delay(1000);
@@ -204,7 +207,7 @@ void setup()
   		Serial.print("Temperature:");
   		Serial.println(temp);
   		displayTemperature(temp);
-  		delay(1000);
+  		delay(500);
   	}
 	displayTemperature(0.0);
 
@@ -214,7 +217,32 @@ void setup()
 int counter = 0;
 float current_temperature         = 0;
 float current_temperature_display = 0;
-int numberOfReceivedPackage = 0;
+
+void displayConnectivityStatus()
+{
+	if (remoteTAOUpConnected + remoteTAOUpwasConnected + localNASConnected + localNASwasConnected < 15) {
+		for (int i = 0; i < 3; i++){
+			digitalWrite(ledA0, HIGH);
+			delay(100);
+			digitalWrite(ledA0, LOW);
+			delay(50);
+		}
+	}
+
+	if (localNASConnected < 2 and localNASwasConnected < 2){
+		Serial.println("Flashing Local");
+		digitalWrite(ledA0, 120);
+	} else if (remoteTAOUpConnected < 2 and remoteTAOUpwasConnected < 2){
+		Serial.println("Flashing Remote");
+		digitalWrite(ledA0, HIGH);
+	} else {
+		digitalWrite(ledA0,   0);
+	}
+
+	sprintf(tmpBuf, "Local %d/%d, Remote %d/%d", localNASConnected, localNASwasConnected, remoteTAOUpConnected, remoteTAOUpwasConnected);
+	//Serial.println(tmpBuf);
+	strcpy(connInfo, tmpBuf);
+}
 
 /* This function loops forever --------------------------------------------*/
 void loop()
@@ -222,7 +250,7 @@ void loop()
 	float celsius = 0.0;
 	int   temperatureDisplayed = 0;
 
-	if (counter > 5000){
+	if (counter > 10000){ // every 10 seconds
 		Serial.println("");
 		/*
 		Serial.println("------------ Flashing LEDs ----------------------------------");
@@ -276,44 +304,36 @@ void loop()
 
 		Serial.print("-------------- Pinging Local --------- ");
 		Serial.flush();
-		numberOfReceivedPackage = WiFi.ping(localNASIP);
-		Serial.print(numberOfReceivedPackage);
+		localNASConnected = WiFi.ping(localNASIP);
+		Serial.print(localNASConnected);
 		Serial.println(" ---");
-		localNASConnected    = (numberOfReceivedPackage == 5);
 
 		digitalWrite(ledBI, LOW);
 		delay(20);
 		digitalWrite(ledBI, HIGH);
 		Serial.print("-------------- Pinging Remote -------- ");
 		Serial.flush();
-		numberOfReceivedPackage = WiFi.ping(remoteTAOUpIP);
-		Serial.print(numberOfReceivedPackage);
+		remoteTAOUpConnected = WiFi.ping(remoteTAOUpIP);
+		Serial.print(remoteTAOUpConnected);
 		Serial.println(" ---");
-		remoteTAOUpConnected = (numberOfReceivedPackage == 5);
+
+		displayConnectivityStatus();
+
+		remoteTAOUpwasConnected = remoteTAOUpConnected;
+		localNASwasConnected    = localNASConnected;
 
 	} else {
 		delay(10);
 		counter = counter + 10;	// wait 10 ms
-		if ((counter%1000) == 0){
+		if ((counter%2500) == 0){ // every 2.5 second
 			Serial.print(counter/1000);
-			Serial.print(" ");
-			Serial.flush();
+			Serial.print("s. Ping (");
+			Serial.print(localNASConnected);
+			Serial.print(", ");
+			Serial.print(remoteTAOUpConnected);
+			Serial.println(") ");
 
-			if (not localNASConnected){
-				for (int i = 0; i < 2; i++){
-					digitalWrite(ledA0, HIGH);
-					delay(200);
-					digitalWrite(ledA0, LOW);
-					delay(50);
-				}
-			} else if (not remoteTAOUpConnected){
-				for (int i = 0; i < 1; i++){
-					digitalWrite(ledA0, HIGH);
-					delay(200);
-					digitalWrite(ledA0, LOW);
-					delay(50);
-				}
-			}
+			displayConnectivityStatus();
 		}
 	}
 
