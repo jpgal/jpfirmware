@@ -60,6 +60,7 @@ DeviceAddress insideThermometer;
 
 char szInfo[64];
 char tmpBuf[64];
+char lcdBuf[16];
 
 SYSTEM_MODE(AUTOMATIC);
 
@@ -84,72 +85,50 @@ void setup()
 	digitalWrite(ledBI, LOW);
 	delay(200);
 
+	// initialize the SPI ( Must call this before begin()! )
+	lcd.initSPI();
+	lcd.begin(16, 2);
+	lcd.setCursor(0, 0);	lcd.print("Boot....");
+	delay(100);
+
+	lcd.setCursor(0, 1);	lcd.print("Wait for Serial  ");
+	delay(100);
 	Serial.begin(9600);
 	int waiting_serial_count = 0;
 	while(!Serial.available() and (waiting_serial_count < 100)){ // wait for 10 seconds
    		SPARK_WLAN_Loop();
 
    		digitalWrite(ledBI, HIGH);
-   		analogWrite(ledD0, (waiting_serial_count * 60) / 25);
+   		analogWrite(ledD0, (waiting_serial_count/25) * 60);
 		delay(65);
 
 		analogWrite(ledD0,  LOW);
 		digitalWrite(ledBI, LOW);
-   		delay(25);
+   		delay(35);
 
    		waiting_serial_count += 1;
    	}
+	if (!Serial.available()){
+		lcd.setCursor(0, 1);	lcd.print("Serial Skipped  ");
+	} else {
+		lcd.setCursor(0, 1);	lcd.print("Serial Ok       ");
+	}
 
 	digitalWrite(ledBI, HIGH);
-	delay(1000);
-	digitalWrite(ledBI, LOW);
-	delay(200);
-
-	// initialize the SPI ( Must call this before begin()! )
-	Serial.println("init SPI");
-	lcd.initSPI();
-	// set up the LCD's number of columns and rows:
-	Serial.println("begin");
-	lcd.begin(16, 2);
-	// Print a message to the LCD.
-	Serial.println("display Message");
-	lcd.print("Hello, Sparky!");
-	delay(1000);
-
-	digitalWrite(ledBI, HIGH);
-	delay(1000);
+	delay(2000);
 	digitalWrite(ledBI, LOW);
 	delay(200);
 
 	Serial.println("flash blacklight");
-	for (int bIndex = 0; bIndex < 5; bIndex++){
+	for (int bIndex = 0; bIndex < 3; bIndex++){
 		lcd.backlight();
-		delay(200);
+		delay(500);
 		lcd.noBacklight();
-		delay(200);
+		delay(500);
 	}
 
 	digitalWrite(ledBI, HIGH);
-	delay(1000);
-	digitalWrite(ledBI, LOW);
-	delay(200);
-
-	Serial.println("display characters");
-	for (int l = 0; l < 2; l++){
-		Serial.println(String("Line: ")+ l );
-		for (int c = 0; c < 16; c++){
-			lcd.setCursor(c, l);
-			// print the number of seconds since reset:
-			Serial.print(String(c)+ " ");
-			Serial.flush();
-			lcd.print("H");
-			delay(500);
-		}
-	}
-	Serial.println("");
-
-	digitalWrite(ledBI, HIGH);
-	delay(1000);
+	delay(2000);
 	digitalWrite(ledBI, LOW);
 	delay(200);
 
@@ -158,18 +137,24 @@ void setup()
     Serial.println(WiFi.subnetMask());
     Serial.println(WiFi.gatewayIP());
     Serial.println(WiFi.SSID());
+	lcd.clear();
+	lcd.setCursor(0, 0);	lcd.print(String("Wifi: ")+ WiFi.SSID());
+	lcd.setCursor(0, 1);	lcd.print(WiFi.localIP());
 
 	digitalWrite(ledBI, HIGH);
-	delay(1000);
+	delay(2000);
 	digitalWrite(ledBI, LOW);
 	delay(200);
 
+	lcd.setCursor(0, 0);	lcd.print("Boot....        ");
+	lcd.setCursor(0, 1);	lcd.print("Temp. Sensor... ");
 	Serial.println("Starting Temperature Sensor...");
 	dallas.begin();
 	Serial.println("Setting resolution to 12...");
 	if (!dallas.getAddress(insideThermometer, 0)) Serial.println("Unable to find address for Device 0");
 	dallas.setResolution(insideThermometer, 12);
 	Serial.println("Started  Sensor...");
+	lcd.setCursor(0, 1);	lcd.print("Sensor Started  ");
 
 	digitalWrite(ledBI, HIGH);
 	delay(1000);
@@ -177,6 +162,7 @@ void setup()
 	delay(200);
 
 	//Register all the Tinker functions
+	lcd.setCursor(0, 1);	lcd.print("Cloud link      ");
     Serial.println("Declaring Spark functions...");
 	Spark.function("digitalread", tinkerDigitalRead);
 	Spark.function("digitalwrite", tinkerDigitalWrite);
@@ -186,38 +172,20 @@ void setup()
 
 	Spark.variable("tempr", &szInfo, STRING);
 	Spark.variable("conn", &connInfo, STRING);
+	lcd.setCursor(0, 1);	lcd.print("Cloud link done ");
 
-	/*
-	 *
-	 Serial.println("Flashing Temperature Gradient...");
-  	delay(100);
-  	for (float temp=15.0; temp < 32.0; temp += 1.0){
-  		Serial.print("Temperature:");
-  		Serial.println(temp);
-  		displayTemperature(temp);
-  		delay(50);
-  	}
-	displayTemperature(0.0);
-	*/
-
+	delay(2000);
+	lcd.clear();
+	lcd.setCursor(0, 0);	lcd.print("Ready           ");
 	Serial.println("Setup done...");
 }
 
-int counter = 0;
+int counter = -1;
 float current_temperature         = 0;
 float current_temperature_display = 0;
 
 void displayConnectivityStatus()
 {
-	if (remoteTAOUpConnected + remoteTAOUpwasConnected + localNASConnected + localNASwasConnected < 15) {
-		for (int i = 0; i < 3; i++){
-			digitalWrite(ledD0, HIGH);
-			delay(100);
-			digitalWrite(ledD0, LOW);
-			delay(50);
-		}
-	}
-
 	if (localNASConnected < 2 and localNASwasConnected < 2){
 		Serial.println("Flashing Local");
 		digitalWrite(ledD0, 120);
@@ -228,35 +196,64 @@ void displayConnectivityStatus()
 		digitalWrite(ledD0,   0);
 	}
 
+	Serial.println(111);
 	sprintf(tmpBuf, "Local %d/%d, Remote %d/%d", localNASConnected, localNASwasConnected, remoteTAOUpConnected, remoteTAOUpwasConnected);
-	//Serial.println(tmpBuf);
+	Serial.println(tmpBuf);
+	Serial.println(222);
 	strcpy(connInfo, tmpBuf);
+	Serial.println(333);
+	sprintf(tmpBuf, "NW: %d/%d", (localNASConnected + localNASwasConnected), (remoteTAOUpConnected + remoteTAOUpwasConnected));
+	Serial.println(444);
+	strcpy(lcdBuf, tmpBuf);
+	Serial.println(555);
+	Serial.println(lcdBuf);
+	Serial.println(666);
+
+	if (remoteTAOUpConnected + remoteTAOUpwasConnected + localNASConnected + localNASwasConnected < 15) {
+		lcd.setCursor(0, 1);	lcd.print(lcdBuf);
+		digitalWrite(ledD0, 50);
+	} else {
+		lcd.setCursor(0, 1);	lcd.print(lcdBuf);
+		digitalWrite(ledD0, LOW);
+	}
 }
 
 int displayS = 0;
+float celsius = 0.0;
+
+int internalloop =   100; // ms
+int imaliveloop  =  2500; // ms
+int refreshloop  = 10000; // ms
 
 /* This function loops forever --------------------------------------------*/
 void loop()
 {
-	float celsius = 0.0;
-	int   temperatureDisplayed = 0;
+	int temperatureDisplayed = 0;
+	int numberoddottodisplay =0;
 
-	if (counter > 10000){ // every 10 seconds
-		Serial.println("");
+	if ((counter < 0) or (counter > refreshloop)){ // every 10 seconds
+		Serial.println("Loop(): Refresh");
+
+		lcd.setCursor(0, 1);	lcd.print("Update Temp    ");
+
+		Serial.println("Loop(): Starting");
 		counter = 0;
 		digitalWrite(ledBI, HIGH);
 
-		Serial.print("-------------- Temperature ----------- ");
+		Serial.print("Loop(): -------------- Temperature ----------- ");
 		Serial.flush();
 		dallas.requestTemperatures(); // Send the command to get temperatures
 
 		celsius  = dallas.getTempCByIndex(0);
-		sprintf(tmpBuf, "%2.2fC", celsius);
+		sprintf(tmpBuf, "%2.2fc", celsius);
 
 		Serial.print(tmpBuf);
 		Serial.flush();
 
 		strcpy(szInfo, tmpBuf);
+
+		strcpy(lcdBuf, tmpBuf);
+		lcd.setCursor(10, 1);	lcd.print(lcdBuf);
 		Serial.println("------------");
 
 		temperatureDisplayed = displayTemperature(celsius);
@@ -272,12 +269,15 @@ void loop()
 				delay(50);
 			}
 		}
+		sprintf(tmpBuf, "Ready: %2.2fc   ", celsius);
+		lcd.setCursor(0,0);		lcd.print(tmpBuf);
 
 		digitalWrite(ledBI, LOW);
 		delay(20);
 		digitalWrite(ledBI, HIGH);
 
-		Serial.print("-------------- Pinging Local --------- ");
+		lcd.setCursor(0, 1);	lcd.print("Check Network   ");
+		Serial.print("Loop(): -------------- Pinging Local --------- ");
 		Serial.flush();
 		localNASConnected = WiFi.ping(localNASIP);
 		Serial.print(localNASConnected);
@@ -286,23 +286,32 @@ void loop()
 		digitalWrite(ledBI, LOW);
 		delay(20);
 		digitalWrite(ledBI, HIGH);
-		Serial.print("-------------- Pinging Remote -------- ");
+		Serial.print("Loop(): -------------- Pinging Remote -------- ");
 		Serial.flush();
 		remoteTAOUpConnected = WiFi.ping(remoteTAOUpIP);
 		Serial.print(remoteTAOUpConnected);
 		Serial.println(" ---");
 
+		lcd.setCursor(0,1);		lcd.print("                ");
 		displayConnectivityStatus();
-
-		Serial.println("-------------- LCD.clear() -------- ");
-		lcd.clear();
 
 		remoteTAOUpwasConnected = remoteTAOUpConnected;
 		localNASwasConnected    = localNASConnected;
+
+		sprintf(tmpBuf, "Ready: %2.2fc   ", celsius);
+		lcd.setCursor(0,0);		lcd.print(tmpBuf);
+		Serial.println("Loop(): -------------- Update Done    -------- ");
+
 	} else {
-		delay(10);
-		counter = counter + 10;	// wait 10 ms
-		if ((counter%2500) == 0){ // every 2.5 second
+		delay(internalloop);
+		counter = counter + internalloop;	// wait 10 ms
+		if ((counter%imaliveloop) == 0){ // every 2.5 second
+
+			Serial.println(celsius);
+			sprintf(tmpBuf, "Ready (%2.2fc)  ", celsius);
+			Serial.println(tmpBuf);
+			Serial.println("ok");
+
 			Serial.print(counter/1000);
 			Serial.print("s. Ping (");
 			Serial.print(localNASConnected);
@@ -310,33 +319,32 @@ void loop()
 			Serial.print(remoteTAOUpConnected);
 			Serial.println(") ");
 
-			displayConnectivityStatus();
+			//displayConnectivityStatus();
 
-			displayS = 1 - displayS;
 
-			for (int l = 0; l < 2; l++){
-				Serial.print("--");
-				for (int c = 0; c < 16; c++){
-					lcd.setCursor(c, l);
-					// print the number of seconds since reset:
-					if (displayS > 0){
-						lcd.print("L");
-						Serial.print("L");
-					} else {
-						lcd.print("H");
-						Serial.print("H");
-					}
-					Serial.flush();
-					delay(200);
-				}
-			}
 			Serial.println("");
 			Serial.println("--- Done ---");
+		} else {
+			numberoddottodisplay = (int) ((counter%refreshloop) / imaliveloop);
+			//sprintf(tmpBuf, "Counter: %d -> %d, %d: %d", counter, counter%refreshloop, (counter%refreshloop)/imaliveloop, numberoddottodisplay);
+			//Serial.println(tmpBuf);
+			lcd.setCursor(15-numberoddottodisplay, 1);	lcd.print(".");
 		}
+
+		displayS = 1 - displayS;
 	}
 
 	digitalWrite(ledBI, LOW);
 }
+
+
+
+
+
+
+
+
+
 
 
 
