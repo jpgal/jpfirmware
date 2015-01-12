@@ -222,7 +222,7 @@ int displayS = 0;
 float celsius = 0.0;
 
 int internalloop =   100; // ms
-int imaliveloop  =  2500; // ms
+int imaliveloop  =  2000; // ms
 int refreshloop  = 10000; // ms
 
 /* This function loops forever --------------------------------------------*/
@@ -240,43 +240,7 @@ void loop()
 		counter = 0;
 		digitalWrite(ledBI, HIGH);
 
-		Serial.print("Loop(): -------------- Temperature ----------- ");
-		Serial.flush();
-		dallas.requestTemperatures(); // Send the command to get temperatures
-
-		celsius  = dallas.getTempCByIndex(0);
-		sprintf(tmpBuf, "%2.2fc", celsius);
-
-		Serial.print(tmpBuf);
-		Serial.flush();
-
-		strcpy(szInfo, tmpBuf);
-
-		strcpy(lcdBuf, tmpBuf);
-		lcd.setCursor(10, 1);	lcd.print(lcdBuf);
-		Serial.println("------------");
-
-		temperatureDisplayed = displayTemperature(celsius);
-
-		if (temperatureDisplayed != current_temperature_display){
-			// Changed the temperature displayed
-			// We flash the main LED a few times
-			current_temperature_display = temperatureDisplayed;
-			for (int i = 0; i < 2; i++){
-				digitalWrite(ledD0, HIGH);
-				delay(250);
-				digitalWrite(ledD0, LOW);
-				delay(50);
-			}
-		}
-		sprintf(tmpBuf, "Ready: %2.2fc   ", celsius);
-		lcd.setCursor(0,0);		lcd.print(tmpBuf);
-
-		digitalWrite(ledBI, LOW);
-		delay(20);
-		digitalWrite(ledBI, HIGH);
-
-		lcd.setCursor(0, 1);	lcd.print("Check Network   ");
+		lcd.setCursor(0, 1);	lcd.print("Network L       ");
 		Serial.print("Loop(): -------------- Pinging Local --------- ");
 		Serial.flush();
 		localNASConnected = WiFi.ping(localNASIP);
@@ -286,6 +250,7 @@ void loop()
 		digitalWrite(ledBI, LOW);
 		delay(20);
 		digitalWrite(ledBI, HIGH);
+		lcd.setCursor(0, 1);	lcd.print("Network R       ");
 		Serial.print("Loop(): -------------- Pinging Remote -------- ");
 		Serial.flush();
 		remoteTAOUpConnected = WiFi.ping(remoteTAOUpIP);
@@ -307,6 +272,40 @@ void loop()
 		counter = counter + internalloop;	// wait 10 ms
 		if ((counter%imaliveloop) == 0){ // every 2.5 second
 
+			Serial.print("InnerLoop(): -------------- Temperature ----------- ");
+			Serial.flush();
+			dallas.requestTemperatures(); // Send the command to get temperatures
+
+			celsius  = dallas.getTempCByIndex(0);
+			sprintf(tmpBuf, "%2.2fc", celsius);
+
+			Serial.print(tmpBuf);
+			Serial.flush();
+
+			strcpy(szInfo, tmpBuf);
+			Serial.println("------------");
+
+			temperatureDisplayed = displayTemperature(celsius);
+
+			if (temperatureDisplayed != current_temperature_display){
+				// Changed the temperature displayed
+				// We flash the main LED a few times
+				current_temperature_display = temperatureDisplayed;
+				for (int i = 0; i < 2; i++){
+					digitalWrite(ledD0, HIGH);
+					delay(250);
+					digitalWrite(ledD0, LOW);
+					delay(50);
+				}
+			}
+			sprintf(tmpBuf, "Ready: %2.2fc   ", celsius);
+			lcd.setCursor(0,0);		lcd.print(tmpBuf);
+
+			digitalWrite(ledBI, LOW);
+			delay(20);
+			digitalWrite(ledBI, HIGH);
+
+
 			Serial.println(celsius);
 			sprintf(tmpBuf, "Ready (%2.2fc)  ", celsius);
 			Serial.println(tmpBuf);
@@ -323,7 +322,7 @@ void loop()
 
 
 			Serial.println("");
-			Serial.println("--- Done ---");
+			Serial.println("InnerLoop(): --- Done ---");
 		} else {
 			numberoddottodisplay = (int) ((counter%refreshloop) / imaliveloop);
 			//sprintf(tmpBuf, "Counter: %d -> %d, %d: %d", counter, counter%refreshloop, (counter%refreshloop)/imaliveloop, numberoddottodisplay);
