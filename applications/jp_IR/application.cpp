@@ -131,8 +131,8 @@ void setup()
 
 	lcd.setCursor(0, 0);	lcd.print("Enabling IR    ");
 	lcd.setCursor(0, 1);	lcd.print(blank);
-	//My_Receiver.enableIRIn(); // Start the receiver
-	//My_Decoder.UseExtnBuf(Buffer);
+	My_Receiver.enableIRIn(); // Start the receiver
+	My_Decoder.UseExtnBuf(Buffer);
 
 	lcd.setCursor(0, 0);	lcd.print("Ready           ");
 	lcd.setCursor(0, 1);	lcd.print(blank);
@@ -159,19 +159,28 @@ void loop()
 		digitalWrite(ledBI, LOW);
 	}
 	*/
-	delay(10);
-	counter += 1;
-	if (counter%(500) == 0){
+  if (My_Receiver.GetResults(&My_Decoder)) {
+	//Restart the receiver so it can be capturing another code
+	//while we are working on decoding this one.
+	My_Receiver.resume();
+	My_Decoder.decode();
+	My_Decoder.DumpResults();
+  }
+
+  counter += 1;
+	if (counter%(1000) == 0){
 		digitalWrite(ledBI, HIGH);
 		Serial.print("loop ");
 		Serial.println(counter);
 		lcd.setCursor(0, 1);	lcd.print(counter/500);
-		delay(100);
+		delay(10);
 		digitalWrite(ledBI, LOW);
 		digitalWrite(ledD0, LOW);
 	}
 
-	if (counter == 1500){
+	/*
+	 *
+	 if (counter == 1500){
 		digitalWrite(ledBI, HIGH);
 		digitalWrite(ledD0, HIGH);
 		Serial.println("loop Enabling IR");
@@ -181,6 +190,16 @@ void loop()
 		My_Decoder.UseExtnBuf(Buffer);
 		Serial.println("loop Enabling IR Done");
 		delay(500);
+		digitalWrite(ledBI, LOW);
+		digitalWrite(ledD0, LOW);
+	}
+	*/
+
+	if ((counter % 20000) == 0){
+		digitalWrite(ledBI, HIGH);
+		digitalWrite(ledD0, HIGH);
+		Serial.println("loop Blink");
+		delay(50);
 		digitalWrite(ledBI, LOW);
 		digitalWrite(ledD0, LOW);
 	}

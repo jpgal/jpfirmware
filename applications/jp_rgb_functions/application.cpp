@@ -196,18 +196,13 @@ void displayConnectivityStatus()
 		digitalWrite(ledD0,   0);
 	}
 
-	Serial.println(111);
 	sprintf(tmpBuf, "Local %d/%d, Remote %d/%d", localNASConnected, localNASwasConnected, remoteTAOUpConnected, remoteTAOUpwasConnected);
 	Serial.println(tmpBuf);
-	Serial.println(222);
 	strcpy(connInfo, tmpBuf);
 	Serial.println(333);
 	sprintf(tmpBuf, "NW: %d/%d", (localNASConnected + localNASwasConnected), (remoteTAOUpConnected + remoteTAOUpwasConnected));
-	Serial.println(444);
 	strcpy(lcdBuf, tmpBuf);
-	Serial.println(555);
 	Serial.println(lcdBuf);
-	Serial.println(666);
 
 	if (remoteTAOUpConnected + remoteTAOUpwasConnected + localNASConnected + localNASwasConnected < 15) {
 		lcd.setCursor(0, 1);	lcd.print(lcdBuf);
@@ -277,7 +272,10 @@ void loop()
 			dallas.requestTemperatures(); // Send the command to get temperatures
 
 			celsius  = dallas.getTempCByIndex(0);
-			sprintf(tmpBuf, "%2.2fc", celsius);
+
+			sprintf(tmpBuf, "%2.2fc -> %2.2fc", current_temperature, celsius);
+			current_temperature = (current_temperature + celsius) / 2.0;
+			sprintf(tmpBuf, "%2.2f", current_temperature);
 
 			Serial.print(tmpBuf);
 			Serial.flush();
@@ -285,7 +283,7 @@ void loop()
 			strcpy(szInfo, tmpBuf);
 			Serial.println("------------");
 
-			temperatureDisplayed = displayTemperature(celsius);
+			temperatureDisplayed = displayTemperature(current_temperature);
 
 			if (temperatureDisplayed != current_temperature_display){
 				// Changed the temperature displayed
@@ -298,7 +296,7 @@ void loop()
 					delay(50);
 				}
 			}
-			sprintf(tmpBuf, "Ready: %2.2fc   ", celsius);
+			sprintf(tmpBuf, "Ready: %2.1fc   ", current_temperature);
 			lcd.setCursor(0,0);		lcd.print(tmpBuf);
 
 			digitalWrite(ledBI, LOW);
@@ -307,7 +305,7 @@ void loop()
 
 
 			Serial.println(celsius);
-			sprintf(tmpBuf, "Ready (%2.2fc)  ", celsius);
+			sprintf(tmpBuf, "Ready (%2.1fc)  ", current_temperature);
 			Serial.println(tmpBuf);
 			Serial.println("ok");
 

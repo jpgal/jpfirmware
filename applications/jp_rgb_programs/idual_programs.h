@@ -64,9 +64,10 @@ typedef struct {
 } ProgramStepStruct;
 
 // The functions
-extern int PCtrl_set(ProgramStepStruct *steps);	// Apply a program
-extern int PCtrl_reset();						// Restart from the beginning of the program
-extern int PCtrl_iterate();						// Iterate through the program steps
+extern void PCtrl_set(ProgramStepStruct *steps, int size);	// Apply a program
+extern void PCtrl_reset();									// Restart from the beginning of the program
+extern int  PCtrl_iterate(int smooth);						// Iterate through the program steps
+															// (smooth is to sub-divize each steps in smaller steps)
 extern void PCtrl_setup();
 
 #endif /* IDUAL_PROGRAMS_H_ */

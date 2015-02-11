@@ -46,29 +46,94 @@ typedef struct {
 } ProgramStepStruct;
 
 ProgramStepStruct *currentProgram;
+int                currentProgramSize = 0;
 ProgramStepStruct  cs;
+ProgramStepStruct  cs_prev;
+
 int                currentProgramStep;
+int                currentProgramHalfStep;
+int halfstepnumbers = 3;
+
 
 // The functions
-int PCtrl_set(ProgramStepStruct *steps){
+void PCtrl_set(ProgramStepStruct *steps, int size){
 	currentProgram     = steps;
+	currentProgramSize = size;
 	currentProgramStep = 0;
+	currentProgramHalfStep = 0;
 }
-int PCtrl_reset(){
+
+void PCtrl_reset(){
 	currentProgramStep = 0;
+	currentProgramHalfStep = 0;
 }
-int PCtrl_iterate(){
+
+int PCtrl_iterate(int smooth){
+	int r  = 0;
+	int g  = 0;
+	int b  = 0;
+	int cw = 0;
+	int ww = 0;
+
+	int return_delay  = 100;
+
 	if (currentProgram != NULL){
-		if (currentProgram[currentProgramStep] != NULL){
+		if (smooth == 1){
+			return_delay  = (int)(cs.delay / halfstepnumbers);
+		} else {
+			return_delay  = cs.delay;
+		}
+
+		if (currentProgramStep < currentProgramSize){
 			cs = currentProgram[currentProgramStep];
-			Serial.println(String("P(")+ String(currentProgramStep) +") ( " + cs.r + ", "+ cs.g + ", "+ cs.b + ", "+ cs.ww + ", "+ cs.cw +")");
-			currentProgramStep += 1;
+			return_delay  = cs.delay;
+
+			if ((currentProgramStep > 1) && (currentProgramHalfStep > 0)){
+				cs_prev = currentProgram[currentProgramStep-1];
+				r  = (cs.r *(currentProgramHalfStep)     + cs_prev.r *(halfstepnumbers-currentProgramHalfStep))/halfstepnumbers;
+				g  = (cs.g *(currentProgramHalfStep)     + cs_prev.g *(halfstepnumbers-currentProgramHalfStep))/halfstepnumbers;
+				b  = (cs.b *(currentProgramHalfStep)     + cs_prev.b *(halfstepnumbers-currentProgramHalfStep))/halfstepnumbers;
+				cw = (cs.cw*(currentProgramHalfStep)     + cs_prev.cw*(halfstepnumbers-currentProgramHalfStep))/halfstepnumbers;
+				ww = (cs.ww*(currentProgramHalfStep)     + cs_prev.ww*(halfstepnumbers-currentProgramHalfStep))/halfstepnumbers;
+
+				//Serial.println(String("P(")+ String(currentProgramStep) +") "+ currentProgramHalfStep +" ( " + cs.r + ", "+ cs.g + ", "+ cs.b + ", "+ cs.ww + ", "+ cs.cw +") ( " + r + ", "+ g + ", "+ b + ", "+ ww + ", "+ cw +")" );
+				analogWrite(PCtrl_def_rLed,  r);
+				analogWrite(PCtrl_def_gLed,  g);
+				analogWrite(PCtrl_def_bLed,  b);
+				analogWrite(PCtrl_def_wwLed, ww);
+				analogWrite(PCtrl_def_cwLed, cw);
+
+				currentProgramHalfStep += 1;
+				if (currentProgramHalfStep == halfstepnumbers+1){
+					currentProgramHalfStep = 0;
+				}
+				return_delay  = (int)(cs.delay / halfstepnumbers);
+
+			} else {
+				Serial.println(String("P(")+ String(currentProgramStep) +") --- ( " + cs.r + ", "+ cs.g + ", "+ cs.b + ", "+ cs.ww + ", "+ cs.cw +")");
+
+				analogWrite(PCtrl_def_rLed,  cs.r);
+				analogWrite(PCtrl_def_gLed,  cs.g);
+				analogWrite(PCtrl_def_bLed,  cs.b);
+				analogWrite(PCtrl_def_wwLed, cs.ww);
+				analogWrite(PCtrl_def_cwLed, cs.cw);
+				currentProgramStep += 1;
+
+				if (cs.delay % 2 == 1){
+					currentProgramHalfStep = 1;
+					return_delay  = (int)(cs.delay / halfstepnumbers);
+				}
+			}
 		} else {
 			currentProgramStep = 0;
+			currentProgramHalfStep = 0;
 			Serial.println(String("P(")+ String(currentProgramStep) +") LOOP ");
 		}
+		return return_delay;
 	}
+	return -1;
 }
+
 void PCtrl_setup(){
 	currentProgram = NULL;
 	pinMode(PCtrl_def_rLed,  OUTPUT);
